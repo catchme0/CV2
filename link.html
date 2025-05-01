@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <H2>LOG</H2>
+    <pre>import numpy as np
+        import cv2
+        import matplotlib.pyplot as plt
+        from scipy.ndimage import convolve
+        
+        # Generate LoG kernel
+        def laplacian_of_gaussian_kernel(ksize, sigma):
+            ax = np.arange(-ksize//2 + 1, ksize//2 + 1)
+            xx, yy = np.meshgrid(ax, ax)
+            norm = (xx**2 + yy**2 - 2*sigma**2) / (sigma**4)
+            kernel = norm * np.exp(-(xx**2 + yy**2) / (2*sigma**2))
+            kernel -= kernel.mean()  # Normalize
+            return kernel
+        
+        # Load image and convert to grayscale
+        img = cv2.imread('1.jpg', cv2.IMREAD_GRAYSCALE) / 255.0
+        
+        # Apply LoG
+        log_kernel = laplacian_of_gaussian_kernel(ksize=9, sigma=1.0)
+        log_result = convolve(img, log_kernel)
+        
+        # Show result
+        plt.imshow(img, cmap='gray')
+        plt.title('original Image')
+        plt.axis('off')
+        plt.show()
+        
+        plt.imshow(log_result, cmap='gray')
+        plt.title('LoG Filtered Image')
+        plt.axis('off')
+        plt.show()
+        </pre>
+
+<h2>DOG</h2>
+<pre>
+    import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+# Generate Gaussian kernel manually
+def gaussian_kernel(size, sigma):
+    ax = np.arange(-size // 2 + 1., size // 2 + 1.)
+    xx, yy = np.meshgrid(ax, ax)
+    kernel = np.exp(-(xx**2 + yy**2) / (2. * sigma**2))
+    return kernel / np.sum(kernel)
+
+# Manual 2D convolution
+def convolve2d(image, kernel):
+    h, w = image.shape
+    kh, kw = kernel.shape
+    pad_h = kh // 2
+    pad_w = kw // 2
+    padded = np.pad(image, ((pad_h, pad_h), (pad_w, pad_w)), mode='constant')
+    result = np.zeros_like(image)
+
+    for i in range(h):
+        for j in range(w):
+            result[i, j] = np.sum(padded[i:i+kh, j:j+kw] * kernel)
+    return result
+
+# Load grayscale image and normalize
+img = cv2.imread('1.jpg', cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255.0
+
+# Apply two Gaussian blurs manually
+kernel1 = gaussian_kernel(size=9, sigma=1)
+kernel2 = gaussian_kernel(size=9, sigma=2)
+
+gauss1 = convolve2d(img, kernel1)
+gauss2 = convolve2d(img, kernel2)
+
+# Difference of Gaussians
+dog = gauss1 - gauss2
+
+# Display the result
+plt.imshow(dog, cmap='gray')
+plt.title('DoG without Inbuilt Functions')
+plt.axis('off')
+plt.show()
+
+</pre>
+
+
+<h2>LBP LOCAL BINARY PATTERN</h2>
+<pre>import cv2
+    import numpy as np
+    import matplotlib.pyplot as plt
+    
+    def compute_lbp(image):
+        h, w = image.shape
+        lbp_image = np.zeros((h-2, w-2), dtype=np.uint8)
+    
+        # For each pixel (excluding border)
+        for i in range(1, h-1):
+            for j in range(1, w-1):
+                center = image[i, j]
+                binary = ''
+                binary += '1' if image[i-1, j-1] >= center else '0'
+                binary += '1' if image[i-1, j  ] >= center else '0'
+                binary += '1' if image[i-1, j+1] >= center else '0'
+                binary += '1' if image[i  , j+1] >= center else '0'
+                binary += '1' if image[i+1, j+1] >= center else '0'
+                binary += '1' if image[i+1, j  ] >= center else '0'
+                binary += '1' if image[i+1, j-1] >= center else '0'
+                binary += '1' if image[i  , j-1] >= center else '0'
+                lbp_image[i-1, j-1] = int(binary, 2)
+    
+        return lbp_image
+    
+    # Load grayscale image
+    img = cv2.imread('1.jpg', cv2.IMREAD_GRAYSCALE)
+    
+    # Compute LBP
+    lbp_result = compute_lbp(img)
+    
+    # Show the result
+    plt.imshow(lbp_result, cmap='gray')
+    plt.title('LBP without Inbuilt Functions')
+    plt.axis('off')
+    plt.show()
+    </pre>
+
+
+    <h2>GLCM -GRAY LEVEL COOCCURANCE MATRIX</h2>
+    <pre>import cv2
+        import numpy as np
+        import matplotlib.pyplot as plt
+        
+        # Compute GLCM for a given offset
+        def compute_glcm(image, offset=(1, 0), levels=256):
+            glcm = np.zeros((levels, levels), dtype=np.float32)
+            h, w = image.shape
+            for i in range(h - offset[0]):
+                for j in range(w - offset[1]):
+                    row, col = image[i, j], image[i + offset[0], j + offset[1]]
+                    glcm[row, col] += 1
+            return glcm / glcm.sum()
+        
+        # Load image and compute GLCM
+        img = cv2.imread('1.jpg', cv2.IMREAD_GRAYSCALE)
+        glcm = compute_glcm(img)
+        
+        # Display GLCM matrix
+        plt.imshow(glcm, cmap='gray')
+        plt.title('GLCM')
+        plt.axis('off')
+        plt.show()
+        </pre>
+
+
+        <h2>MEAN FILTER</h2>
+        <pre>import cv2
+            import numpy as np
+            import matplotlib.pyplot as plt
+            
+            # Apply Mean filter manually
+            def mean_filter(image, kernel_size=3):
+                padded_image = np.pad(image, ((kernel_size//2,)*(2)), mode='constant')
+                output = np.zeros_like(image)
+                for i in range(image.shape[0]):
+                    for j in range(image.shape[1]):
+                        roi = padded_image[i:i+kernel_size, j:j+kernel_size]
+                        output[i, j] = np.mean(roi)
+                return output
+            
+            # Load and filter the image
+            img = cv2.imread('1.jpg', cv2.IMREAD_GRAYSCALE)
+            filtered_img = mean_filter(img)
+            
+            # Show results
+            plt.subplot(1, 2, 1)
+            plt.imshow(img, cmap='gray')
+            plt.title('Original Image')
+            plt.axis('off')
+            
+            plt.subplot(1, 2, 2)
+            plt.imshow(filtered_img, cmap='gray')
+            plt.title('Mean Filtered Image')
+            plt.axis('off')
+            
+            plt.show()
+            
+            </pre>
+</body>
+</html>
